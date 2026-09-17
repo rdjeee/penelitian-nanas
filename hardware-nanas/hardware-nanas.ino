@@ -47,7 +47,19 @@ int eksekusiPindaiSpektrum(String id_nanas, String titik_pindai) {
   display.print("MEMINDAI..");
   display.display();
 
-  sensorSpektrum.takeMeasurements();
+  // KONTROL LAMPU LED ONBOARD:
+  // Jika mode Dark: matikan semua lampu LED (gelap murni)
+  // Jika mode White / Sampel (Atas, Tengah, Bawah): nyalakan lampu LED otomatis
+  if (titik_pindai == "Dark") {
+    sensorSpektrum.disableBulb(AS7265x_LED_WHITE);
+    sensorSpektrum.disableBulb(AS7265x_LED_IR);
+    sensorSpektrum.disableBulb(AS7265x_LED_UV);
+    sensorSpektrum.takeMeasurements();
+    Serial.println("=> Mode DARK: Pengukuran tanpa lampu LED.");
+  } else {
+    sensorSpektrum.takeMeasurementsWithBulb();
+    Serial.println("=> Mode " + titik_pindai + ": Pengukuran dengan lampu LED ON.");
+  }
 
   float ch_a = sensorSpektrum.getCalibratedA(); float ch_b = sensorSpektrum.getCalibratedB();
   float ch_c = sensorSpektrum.getCalibratedC(); float ch_d = sensorSpektrum.getCalibratedD();
@@ -59,7 +71,7 @@ int eksekusiPindaiSpektrum(String id_nanas, String titik_pindai) {
   float ch_t = sensorSpektrum.getCalibratedT(); float ch_u = sensorSpektrum.getCalibratedU();
   float ch_v = sensorSpektrum.getCalibratedV(); float ch_w = sensorSpektrum.getCalibratedW();
 
-  // 1. SIMPAN KE MICROSD
+  // 1. SIMPAN KE MICROSD (Jika terpasang)
   File dataFile = SD.open("/data_nanas.csv", FILE_APPEND);
   if (dataFile) {
     dataFile.print(id_nanas); dataFile.print(",");
@@ -76,7 +88,7 @@ int eksekusiPindaiSpektrum(String id_nanas, String titik_pindai) {
     dataFile.close();
     Serial.println("=> TERSIMPAN di MicroSD!");
   } else {
-    Serial.println("=> GAGAL membuka MicroSD.");
+    Serial.println("=> MicroSD tidak digunakan / tidak tersedia.");
   }
 
   // 2. KIRIM KE FLASK (Jika Terhubung)
@@ -103,7 +115,7 @@ int eksekusiPindaiSpektrum(String id_nanas, String titik_pindai) {
     Serial.print("=> HTTP Response Flask: ");
     Serial.println(httpResponseCode);
   } else {
-    Serial.println("=> WiFi terputus. Hanya menyimpan secara lokal di SD Card.");
+    Serial.println("=> WiFi terputus. Hanya menyimpan secara lokal.");
   }
 
   // 3. TAMPILAN SUKSES
@@ -146,10 +158,10 @@ void setup() {
   
   pinMode(pinButton, INPUT_PULLUP); // Tombol menggunakan pull-up internal
 
-  // INISIALISASI MICROSD
+  // INISIALISASI MICROSD (Opsional)
   Serial.print("Inisialisasi SD Card... ");
   if (!SD.begin(pinCS_SD)) {
-    Serial.println("GAGAL!");
+    Serial.println("Dilewati / GAGAL!");
   } else {
     Serial.println("SIAP!");
     File dataFile = SD.open("/data_nanas.csv", FILE_READ);
@@ -170,18 +182,28 @@ void setup() {
     Serial.println("Gagal mendeteksi AS7265X!");
     while(1);
   }
+
+  // Mengatur batas arus LED sensor spektrum
+  sensorSpektrum.setBulbCurrent(AS7265X_LED_CURRENT_LIMIT_12_5MA, AS7265x_LED_WHITE);
+  sensorSpektrum.setBulbCurrent(AS7265X_LED_CURRENT_LIMIT_12_5MA, AS7265x_LED_UV);
+  sensorSpektrum.setBulbCurrent(AS7265X_LED_CURRENT_LIMIT_12_5MA, AS7265x_LED_IR);
   sensorSpektrum.disableIndicator();
 
   WiFi.begin(ssid, password);
   Serial.print("Menghubungkan WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
+  unsigned long startAttemptTime = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000) {
     delay(500); Serial.print(".");
   }
   
-  Serial.println("\n=========================================");
-  Serial.println("Wi-Fi Terhubung!");
-  Serial.print("Endpoint: http://"); Serial.print(WiFi.localIP()); Serial.println("/trigger");
-  Serial.println("=========================================");
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n=========================================");
+    Serial.println("Wi-Fi Terhubung!");
+    Serial.print("Endpoint: http://"); Serial.print(WiFi.localIP()); Serial.println("/trigger");
+    Serial.println("=========================================");
+  } else {
+    Serial.println("\nGagal terhubung ke WiFi.");
+  }
 
   display.clearDisplay();
   display.setCursor(0, 10);
@@ -211,32 +233,19 @@ void loop() {
   else {
     // --- CEK JIKA TOMBOL FISIK DITEKAN ---
     if (digitalRead(pinButton) == LOW) {
-      delay(50); // Debounce untuk mencegah klik ganda
+      delay(50); // Debounce
       if (digitalRead(pinButton) == LOW) {
         Serial.println("\n=> TOMBOL FISIK DITEKAN!");
         
-        VL53L0X_RangingMeasurementData_t dataJarak;
-        sensorJarak.rangingTest(&dataJarak, false);
-        int jarak_mm = (dataJarak.RangeStatus != 4) ? dataJarak.RangeMilliMeter : 9999;
+        String idGenerate = "Fisik_" + String(idLokalOtomatis);
+        eksekusiPindaiSpektrum(idGenerate, "T_Lokal");
+        idLokalOtomatis++; // Naikkan nomor untuk pemindaian berikutnya
         
-        if (jarak_mm >= 39 && jarak_mm <= 61) {
-          String idGenerate = "Fisik_" + String(idLokalOtomatis);
-          eksekusiPindaiSpektrum(idGenerate, "T_Lokal");
-          idLokalOtomatis++; // Naikkan nomor untuk pemindaian berikutnya
-        } else {
-          Serial.println("=> DITOLAK: Jarak tidak pas!");
-          display.clearDisplay();
-          display.setTextSize(2);
-          display.setCursor(10, 25);
-          display.print("GAGAL!");
-          display.display();
-          delay(1000); // Tahan tampilan gagal sesaat
-        }
-        while(digitalRead(pinButton) == LOW); // Tunggu sampai jari Anda dilepas
+        while(digitalRead(pinButton) == LOW); // Tunggu sampai jari dilepas
       }
     }
 
-    // --- RUTINITAS PEMBACAAN JARAK (OLED & LED) ---
+    // --- RUTINITAS MONITORING JARAK (OLED REAL-TIME) ---
     if (millis() - waktuTerakhirCek > 200) {
       waktuTerakhirCek = millis();
       
@@ -262,11 +271,10 @@ void loop() {
       }
       display.display();
 
-      if (jarak_mm >= 39 && jarak_mm <= 61) {
-        digitalWrite(pinRed, LOW); digitalWrite(pinYellow, HIGH); digitalWrite(pinGreen, LOW);
-      } else {
-        digitalWrite(pinRed, HIGH); digitalWrite(pinYellow, LOW); digitalWrite(pinGreen, LOW);
-      }
+      // Indikator LED standby kuning
+      digitalWrite(pinRed, LOW); 
+      digitalWrite(pinYellow, HIGH); 
+      digitalWrite(pinGreen, LOW);
     }
   }
 }
@@ -283,16 +291,11 @@ void handleTrigger() {
     return;
   }
 
+  // Monitoring jarak mentah saat scan dipicu
   VL53L0X_RangingMeasurementData_t dataJarak;
   sensorJarak.rangingTest(&dataJarak, false);
   int jarak_mm = (dataJarak.RangeStatus != 4) ? dataJarak.RangeMilliMeter : 9999;
-
   Serial.print("=> Jarak fisik saat web diklik: "); Serial.print(jarak_mm); Serial.println(" mm");
-
-  if (jarak_mm < 39 || jarak_mm > 61) {
-    server.send(400, "application/json", "{\"status\":\"error\", \"pesan\":\"Jarak harus pas!\"}");
-    return;
-  }
 
   String body = server.arg("plain");
   JsonDocument inputDoc;
@@ -300,7 +303,7 @@ void handleTrigger() {
   String id_nanas = inputDoc["id_nanas"];
   String titik_pindai = inputDoc["titik_pindai"];
 
-  // Memanggil fungsi inti
+  // Memanggil fungsi inti eksekusi scan
   int httpCode = eksekusiPindaiSpektrum(id_nanas, titik_pindai);
 
   if (httpCode == 200) {

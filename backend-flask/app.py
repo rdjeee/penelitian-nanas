@@ -7,7 +7,8 @@ app = Flask(__name__)
 SUPABASE_URL = "https://wlkivyfyusohqdfjjstl.supabase.co"
 
 # Gunakan Secret Key di sini (lingkungan backend yang aman)
-SUPABASE_KEY = "sb_secret_WuJs4TeTORKIABf2sjBnIA_o88Y4OL4"
+# SUPABASE_KEY = "sb_secret_WuJs4TeTORKIABf2sjBnIA_o88Y4OL4"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsa2l2eWZ5dXNvaHFkZmpqc3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODU0NzQsImV4cCI6MjA5NDA2MTQ3NH0.Xb667ERfbey28WfWOQLS5npQ77iV9axDFCAOeYa8Lno"
 
 # Inisialisasi koneksi ke Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
