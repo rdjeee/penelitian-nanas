@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 type PosisiScan = "White" | "Dark" | "Atas" | "Tengah" | "Bawah";
 
 // Default IP Address ESP32 (sesuaikan jika berpindah jaringan)
-const ESP32_IP = "192.168.1.18";
+const ESP32_IP = "192.168.1.7";
 
 export default function DataCollector() {
   const [idNanas, setIdNanas] = useState("N-0001");
@@ -13,6 +13,8 @@ export default function DataCollector() {
   const [statusType, setStatusType] = useState<"info" | "success" | "error">("info");
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const [lastBrix, setLastBrix] = useState<number | null>(null);
 
   // Helper untuk mendapatkan target jumlah scan berdasarkan posisi
   const getTargetScan = (pos: PosisiScan): number => {
@@ -57,6 +59,15 @@ export default function DataCollector() {
 
         if (!response.ok) {
           throw new Error(`ESP32 mengembalikan status ${response.status}`);
+        }
+
+        try {
+          const resData = await response.json();
+          if (resData.prediksi_brix !== undefined && resData.prediksi_brix !== null) {
+            setLastBrix(resData.prediksi_brix);
+          }
+        } catch {
+          // ignore json parse error
         }
 
         successCount++;
@@ -123,63 +134,30 @@ export default function DataCollector() {
           />
         </div>
 
-        {/* Grup 1: Kalibrasi Referensi */}
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Kalibrasi Referensi
-          </label>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => setPosisi("White")}
-              disabled={isLoading}
-              className={`py-3 px-3 rounded-xl border flex flex-col items-center justify-center transition-all ${
-                posisi === "White"
-                  ? "bg-amber-500 text-white border-amber-600 shadow-md scale-[1.02]"
-                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              <span className="font-bold text-sm">White Reference</span>
-              <span
-                className={`text-[11px] mt-0.5 px-2 py-0.2 rounded-full font-medium ${
-                  posisi === "White"
-                    ? "bg-amber-600 text-amber-100"
-                    : "bg-amber-100 text-amber-800"
-                }`}
-              >
-                LED Onboard ON
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPosisi("Dark")}
-              disabled={isLoading}
-              className={`py-3 px-3 rounded-xl border flex flex-col items-center justify-center transition-all ${
-                posisi === "Dark"
-                  ? "bg-slate-800 text-white border-slate-900 shadow-md scale-[1.02]"
-                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              <span className="font-bold text-sm">Dark Reference</span>
-              <span
-                className={`text-[11px] mt-0.5 px-2 py-0.2 rounded-full font-medium ${
-                  posisi === "Dark"
-                    ? "bg-slate-900 text-slate-200"
-                    : "bg-slate-100 text-slate-700"
-                }`}
-              >
-                LED Onboard OFF
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Grup 2: Pemindaian Titik Nanas */}
+        {/* Pilihan Posisi Scan */}
         <div className="mb-6">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Posisi Pindaian
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Posisi / Mode Pengukuran
           </label>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            {(["White", "Dark"] as PosisiScan[]).map((pos) => (
+              <button
+                key={pos}
+                type="button"
+                onClick={() => setPosisi(pos)}
+                disabled={isLoading}
+                className={`py-2 px-3 rounded-xl font-medium text-xs border transition-all flex flex-col items-center justify-center ${
+                  posisi === pos
+                    ? pos === "White"
+                      ? "bg-slate-100 border-slate-400 text-slate-800 shadow-sm"
+                      : "bg-slate-800 border-slate-900 text-white shadow-sm"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <span className="font-semibold text-sm">{pos} Ref</span>
+              </button>
+            ))}
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {(["Atas", "Tengah", "Bawah"] as PosisiScan[]).map((pos) => (
               <button
@@ -187,10 +165,10 @@ export default function DataCollector() {
                 type="button"
                 onClick={() => setPosisi(pos)}
                 disabled={isLoading}
-                className={`py-3 px-2 rounded-xl border flex items-center justify-center transition-all ${
+                className={`py-2.5 px-3 rounded-xl font-medium text-xs border transition-all flex flex-col items-center justify-center ${
                   posisi === pos
-                    ? "bg-blue-600 text-white border-blue-700 shadow-md scale-[1.02]"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 <span className="font-bold text-sm">{pos}</span>
@@ -237,6 +215,22 @@ export default function DataCollector() {
             <span>Mulai Scan Otomatis ({getTargetScan(posisi)}x {posisi})</span>
           )}
         </button>
+
+        {/* Kartu Prediksi Brix Real-Time */}
+        {lastBrix !== null && (
+          <div className="mt-4 p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                Estimasi Kemanisan
+              </p>
+              <p className="text-xs text-amber-600">Model PLSR Spektroskopi</p>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-black text-amber-950">{lastBrix}</span>
+              <span className="text-sm font-bold text-amber-700">°Bx</span>
+            </div>
+          </div>
+        )}
 
         {/* Status Notifikasi */}
         {status && (

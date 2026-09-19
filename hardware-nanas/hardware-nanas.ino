@@ -36,6 +36,7 @@ unsigned long waktuTerakhirCek = 0;
 bool statusSukses = false;
 unsigned long waktuSukses = 0;
 int idLokalOtomatis = 1; // Counter ID untuk pemindaian via tombol fisik
+float brixPrediksiTerakhir = -1.0; // Menyimpan hasil prediksi Brix terakhir dari Flask
 
 // =======================================================================
 // FUNGSI INTI: MENGEKSEKUSI PEMINDAIAN & MENYIMPAN DATA (SD CARD + FLASK)
@@ -93,6 +94,7 @@ int eksekusiPindaiSpektrum(String id_nanas, String titik_pindai) {
 
   // 2. KIRIM KE FLASK (Jika Terhubung)
   int httpResponseCode = 200; // Asumsi sukses (bisa beroperasi *offline* murni dengan SD Card)
+  brixPrediksiTerakhir = -1.0;
   if (WiFi.status() == WL_CONNECTED) {
     JsonDocument payload;
     payload["id_nanas"] = id_nanas;     payload["titik_pindai"] = titik_pindai;
@@ -110,6 +112,18 @@ int eksekusiPindaiSpektrum(String id_nanas, String titik_pindai) {
     http.begin(flask_server);
     http.addHeader("Content-Type", "application/json");
     httpResponseCode = http.POST(jsonPayload);
+    
+    if (httpResponseCode == 200) {
+      String responseBody = http.getString();
+      JsonDocument docRes;
+      DeserializationError err = deserializeJson(docRes, responseBody);
+      if (!err && docRes["prediksi_brix"].is<float>()) {
+        brixPrediksiTerakhir = docRes["prediksi_brix"].as<float>();
+        Serial.print("=> [ML PREDIKSI] Brix: ");
+        Serial.print(brixPrediksiTerakhir, 1);
+        Serial.println(" °Bx");
+      }
+    }
     http.end();
     
     Serial.print("=> HTTP Response Flask: ");
@@ -118,13 +132,38 @@ int eksekusiPindaiSpektrum(String id_nanas, String titik_pindai) {
     Serial.println("=> WiFi terputus. Hanya menyimpan secara lokal.");
   }
 
-  // 3. TAMPILAN SUKSES
+  // 3. TAMPILAN SUKSES & HASIL DI OLED
   if (httpResponseCode == 200) {
     digitalWrite(pinRed, LOW); digitalWrite(pinYellow, LOW); digitalWrite(pinGreen, HIGH);
     display.clearDisplay();
-    display.setTextSize(2);
-    display.setCursor(10, 25);
-    display.print("SUKSES!");
+    display.setTextColor(SSD1306_WHITE);
+    
+    if (brixPrediksiTerakhir >= 0.0) {
+      // Tampilan Nilai Prediksi Brix untuk Buah
+      display.setTextSize(1);
+      display.setCursor(0, 2);
+      display.print(id_nanas);
+      display.print(" ("); display.print(titik_pindai); display.println(")");
+      display.drawLine(0, 13, 128, 13, SSD1306_WHITE);
+
+      display.setTextSize(1);
+      display.setCursor(0, 20);
+      display.print("Estimasi Kemanisan:");
+
+      display.setTextSize(2);
+      display.setCursor(8, 38);
+      display.print(brixPrediksiTerakhir, 1);
+      display.setTextSize(1);
+      display.print(" oBx");
+    } else {
+      // Tampilan untuk Kalibrasi White / Dark
+      display.setTextSize(1);
+      display.setCursor(0, 10);
+      display.print("MODE: "); display.println(titik_pindai);
+      display.setTextSize(2);
+      display.setCursor(10, 32);
+      display.print("SUKSES!");
+    }
     display.display();
     statusSukses = true;
     waktuSukses = millis();
@@ -307,7 +346,11 @@ void handleTrigger() {
   int httpCode = eksekusiPindaiSpektrum(id_nanas, titik_pindai);
 
   if (httpCode == 200) {
-    server.send(200, "application/json", "{\"status\":\"sukses\"}");
+    if (brixPrediksiTerakhir >= 0.0) {
+      server.send(200, "application/json", "{\"status\":\"sukses\",\"prediksi_brix\":" + String(brixPrediksiTerakhir, 1) + "}");
+    } else {
+      server.send(200, "application/json", "{\"status\":\"sukses\"}");
+    }
   } else {
     server.send(500, "application/json", "{\"status\":\"error\", \"pesan\":\"Gagal mencapai Flask\"}");
   }

@@ -1,0 +1,10 @@
+=== RINGKASAN HASIL EVALUASI MODEL PLSR NANAS ===
+File Dataset          : dataset_lama.xlsx
+Sumber Referensi      : Eksternal ('dataset_baru.csv' - 10x White, 10x Dark)
+Jumlah Titik Sampel   : 3147 titik biologis (Atas/Tengah/Bawah)
+Komponen Laten Terbaik: 1
+RMSE Cross-Validation : 3.5760 °Brix
+R² Kalibrasi (Train)  : 0.0022
+RMSEC (Train)         : 3.5609 °Brix
+R² Validasi  (Test)   : -0.0009
+RMSEP (Test)          : 3.4937 °Brix
