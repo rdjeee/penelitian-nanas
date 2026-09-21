@@ -3,14 +3,22 @@ import joblib
 import numpy as np
 from flask import Flask, request, jsonify
 from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
 # ==============================================================================
 # KONFIGURASI SUPABASE
 # ==============================================================================
-SUPABASE_URL = "https://lecxngcahtadmgubcrhj.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlY3huZ2NhaHRhZG1ndWJjcmhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3NTI0NjUsImV4cCI6MjEwNTMyODQ2NX0.IqS7lHDshcodVescshb7sU2JRSnDxRyMIDuypewq6qA"
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("Kredensial Supabase tidak ditemukan! Pastikan file .env sudah dikonfigurasi.")
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================================================================
