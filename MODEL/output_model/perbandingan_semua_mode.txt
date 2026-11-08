@@ -1,0 +1,7 @@
+=== HASIL PERBANDINGAN EVALUASI MODEL PLSR ANTAR MODE (M0 - M3) ===
+
+Mode  Titik Sampel                  Preprocessing  Komponen Optimal  RMSE_CV R2_Train (RMSEC)  R2_Test (RMSEP)
+  M0           276              Raw Spectra + SNV                 1   2.2162  0.0592 (2.1000)  0.1268 (1.8647)
+  M1           276              Raw Spectra + SNV                 3   2.1299  0.1287 (2.0209)  0.2278 (1.7536)
+  M2           276 Absorbansi [ -log10(R) ] + SNV                 2   2.1126  0.1031 (2.0503)  0.0901 (1.9035)
+  M3           276 Absorbansi [ -log10(R) ] + SNV                 1   2.2445  0.0137 (2.1501) -0.0649 (2.0593)

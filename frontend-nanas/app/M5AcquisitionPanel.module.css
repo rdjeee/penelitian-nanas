@@ -1,0 +1,101 @@
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f7fa;
+  min-height: 100vh;
+  color: #17212b;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.header h1 { margin: 4px 0 8px; font-size: 30px; }
+.header p { margin: 0; color: #5d6773; }
+.eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; }
+
+.statusBar {
+  background: white;
+  border: 1px solid #dfe5ec;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.card {
+  background: white;
+  border: 1px solid #dfe5ec;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 18px rgba(21, 36, 50, .04);
+  margin-bottom: 18px;
+}
+
+.card h2 { margin: 0 0 16px; font-size: 19px; }
+.card h3 { margin: 0 0 12px; }
+.card p { color: #65717e; }
+
+.card label, .fruitRow label { display: block; font-size: 12px; font-weight: 800; color: #5e6975; margin-bottom: 6px; }
+.card input, .fruitRow input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cfd7e1;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.page button {
+  border: 1px solid #cbd4df;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.page button:disabled { opacity: .45; cursor: not-allowed; }
+.primaryButton { background: #17212b; color: white; border-color: #17212b; }
+.secondaryButton { background: white; }
+.dangerButton { background: #962c2c; color: white; border-color: #962c2c; }
+
+.actionRow { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 14px; }
+.refBox { display: grid; gap: 8px; margin: 12px 0; }
+.refBox div { background: #f7f9fb; border-radius: 8px; padding: 10px; display: grid; gap: 4px; }
+.refBox span { font-size: 11px; font-weight: 800; color: #6c7580; }
+.refBox code { white-space: normal; overflow-wrap: anywhere; }
+
+.metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.metric { border: 1px solid #dde4eb; border-radius: 10px; padding: 12px; background: #fafbfc; }
+.metric span { display: block; font-size: 11px; font-weight: 800; color: #697480; margin-bottom: 5px; }
+.metric strong { font-size: 17px; }
+.metricDanger { border-color: #e0a5a5; background: #fff3f3; }
+
+.positionGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.positionCard { border: 1px solid #dfe5ec; border-radius: 12px; padding: 14px; }
+.positionCard button { width: 100%; }
+.qcBox { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.6; }
+.qcGood { background: #eef8f1; border: 1px solid #a8d5b4; }
+.qcBad { background: #fff5e9; border: 1px solid #e5c18f; }
+.muted { font-size: 13px; color: #8a949f; }
+.warning { background: #fff1f1; border: 1px solid #e1aaaa; padding: 12px; border-radius: 10px; font-weight: 750; }
+.driftBox { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.fruitRow { max-width: 360px; }
+
+@media (max-width: 850px) {
+  .grid2, .positionGrid { grid-template-columns: 1fr; }
+  .header { flex-direction: column; }
+}

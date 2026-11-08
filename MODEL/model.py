@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Konfigurasi direktori sementara untuk matplotlib agar tidak bermasalah dengan izin akses di Windows
+os.environ.setdefault('MPLCONFIGDIR', os.path.join(os.environ.get('TEMP', os.getcwd()), 'mpl'))
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -50,16 +55,34 @@ def hitung_absorbansi(S, W, D, eps=1e-5):
     return A
 
 def main():
-    candidate_files = [
-        'dataset_lama.xlsx',
-        'Data_Uji_TPT_Nanas_dan_Brix (4).xlsx',
-        'dataset_baru.csv'
-    ]
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = None
-    for cand in candidate_files:
-        if os.path.exists(cand):
-            file_path = cand
-            break
+
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg.upper() in ['M0', 'M1', 'M2', 'M3']:
+            cand = os.path.join(base_dir, 'dataset_per_mode', f'dataset_{arg.upper()}.xlsx')
+            if os.path.exists(cand):
+                file_path = cand
+        elif os.path.exists(arg):
+            file_path = arg
+        elif os.path.exists(os.path.join(base_dir, arg)):
+            file_path = os.path.join(base_dir, arg)
+
+    if not file_path:
+        candidate_files = [
+            os.path.join(base_dir, 'dataset_per_mode', 'dataset_M3.xlsx'),
+            os.path.join(base_dir, 'dataset_per_mode', 'dataset_M2.xlsx'),
+            os.path.join(base_dir, 'dataset_per_mode', 'dataset_M1.xlsx'),
+            os.path.join(base_dir, 'dataset_per_mode', 'dataset_M0.xlsx'),
+            os.path.join(base_dir, 'dataset_lama.xlsx'),
+            os.path.join(base_dir, 'Data_Uji_TPT_Nanas_dan_Brix (4).xlsx'),
+            os.path.join(base_dir, 'dataset_baru.csv')
+        ]
+        for cand in candidate_files:
+            if os.path.exists(cand):
+                file_path = cand
+                break
 
     if not file_path:
         print("Tidak ada file dataset (.xlsx / .csv) yang ditemukan di folder MODEL/!")
@@ -112,11 +135,12 @@ def main():
         ref_source_desc = f"Internal ({file_path})"
         print(f"=> Ditemukan {len(df_dark)} baris Dark Reference dan {len(df_white)} baris White Reference di '{file_path}'.")
         print("=> Nilai rata-rata Dark Reference dan White Reference berhasil dihitung.")
-    elif os.path.exists('dataset_baru.csv'):
+        fallback_csv = os.path.join(base_dir, 'dataset_baru.csv')
+    elif os.path.exists(fallback_csv):
         print(f"=> [INFO]: File '{file_path}' tidak memiliki baris White/Dark Reference.")
-        print("   Mengambil White & Dark Reference fisik dari 'dataset_baru.csv'...")
+        print(f"   Mengambil White & Dark Reference fisik dari '{fallback_csv}'...")
         try:
-            df_ref_source = pd.read_csv('dataset_baru.csv')
+            df_ref_source = pd.read_csv(fallback_csv)
             for col in FEATURE_COLS:
                 df_ref_source[col] = pd.to_numeric(df_ref_source[col], errors='coerce')
             
@@ -235,7 +259,7 @@ def main():
     # --------------------------------------------------------------------------
     # 8. EXPORT MODEL, SCALER, PARAMETER KALIBRASI, & RINGKASAN
     # --------------------------------------------------------------------------
-    output_dir = 'output_model'
+    output_dir = os.path.join(base_dir, 'output_model')
     os.makedirs(output_dir, exist_ok=True)
 
     path_model = os.path.join(output_dir, 'model_plsr_nanas.pkl')
